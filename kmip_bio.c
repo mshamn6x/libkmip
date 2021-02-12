@@ -1092,41 +1092,150 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     }
     
     GetResponsePayload *pld = (GetResponsePayload *)resp_item.response_payload;
+
+    printf("Mahesh  KMIP_OBJTYPE_TYPE -> %d \n",pld->object_type);
     
-    if(pld->object_type != KMIP_OBJTYPE_SYMMETRIC_KEY)
+    if(pld->object_type == KMIP_OBJTYPE_SYMMETRIC_KEY)
     {
+    
+        SymmetricKey *symmetric_key = (SymmetricKey *)pld->object;
+        KeyBlock *block = symmetric_key->key_block;
+        if((block->key_format_type != KMIP_KEYFORMAT_RAW) || (block->key_wrapping_data != NULL))
+        {
+            kmip_free_response_message(ctx, &resp_m);
+            kmip_set_buffer(ctx, NULL, 0);
+            return(KMIP_OBJECT_MISMATCH);
+        }
+        KeyValue *block_value = block->key_value;
+        ByteString *material = (ByteString *)block_value->key_material;
+        
+        char *result_key = ctx->calloc_func(ctx->state, 1, material->size);
+        *key_size = material->size;
+        for(int i = 0; i < *key_size; i++)
+        {
+            result_key[i] = material->value[i];
+        }
+        *key = result_key;
+        
+        /* Clean up the response message, the encoding buffer, and the KMIP */
+        /* context. */
+        kmip_free_response_message(ctx, &resp_m);
+        kmip_free_buffer(ctx, encoding, buffer_total_size);
+        encoding = NULL;
+        kmip_set_buffer(ctx, NULL, 0);
+        
+        return(result);
+
+    }else if(pld->object_type == KMIP_OBJTYPE_PUBLIC_KEY){
+
+        printf("Mahesh  KMIP_OBJTYPE_TYPE -> PUB KEY");
+
+        PublicKey *pubkey = (PublicKey *)pld->object;
+        KeyBlock *block = pubkey->key_block;
+        printf("PUB KEY -> key_format_type = %d\n",block->key_format_type);
+        printf("PUB KEY -> KMIP_KEYFORMAT_RAW = %d\n",KMIP_KEYFORMAT_RAW);
+        if (block->key_wrapping_data != NULL){
+            printf("PUB KEY -> block->key_wrapping_data is present\n");
+        } else{
+            printf("PUB KEY -> block->key_wrapping_data is not present\n");
+        }
+        
+        if((block->key_format_type != KMIP_KEYFORMAT_PKCS1) || (block->key_wrapping_data != NULL))
+        {
+            
+            kmip_free_response_message(ctx, &resp_m);
+            kmip_set_buffer(ctx, NULL, 0);
+            printf("Mahesh  KMIP_OBJTYPE_TYPE -> PUB KEY i'm here");
+            return(KMIP_OBJECT_MISMATCH);
+        }
+
+        KeyValue *block_value = block->key_value;
+        ByteString *material = (ByteString *)block_value->key_material;
+        
+        char *result_key = ctx->calloc_func(ctx->state, 1, material->size);
+        *key_size = material->size;
+        for(int i = 0; i < *key_size; i++)
+        {
+            result_key[i] = material->value[i];
+        }
+        *key = result_key;
+        
+        /* Clean up the response message, the encoding buffer, and the KMIP */
+        /* context. */
+        kmip_free_response_message(ctx, &resp_m);
+        kmip_free_buffer(ctx, encoding, buffer_total_size);
+        encoding = NULL;
+        kmip_set_buffer(ctx, NULL, 0);
+        
+        return(result);
+
+    }else if(pld->object_type == KMIP_OBJTYPE_PRIVATE_KEY){
+
+        printf("Mahesh  KMIP_OBJTYPE_TYPE -> PRIVATE KEY\n");
+
+        PrivateKey *privatekey = (PrivateKey *)pld->object;
+        KeyBlock *block = privatekey->key_block;
+        printf("PUB KEY -> key_format_type = %d\n",block->key_format_type);
+        printf("PUB KEY -> KMIP_KEYFORMAT_RAW = %d\n",KMIP_KEYFORMAT_RAW);
+        if (block->key_wrapping_data != NULL){
+            printf("PUB KEY -> block->key_wrapping_data is present\n");
+        } else{
+            printf("PUB KEY -> block->key_wrapping_data is not present\n");
+        }
+        
+        if((block->key_format_type != KMIP_KEYFORMAT_PKCS8) || (block->key_wrapping_data != NULL))
+        {
+            
+            kmip_free_response_message(ctx, &resp_m);
+            kmip_set_buffer(ctx, NULL, 0);
+            printf("Mahesh  KMIP_OBJTYPE_TYPE -> PRIVATE KEY i'm here\n");
+            return(KMIP_OBJECT_MISMATCH);
+        }
+
+        KeyValue *block_value = block->key_value;
+        ByteString *material = (ByteString *)block_value->key_material;
+        
+        char *result_key = ctx->calloc_func(ctx->state, 1, material->size);
+        *key_size = material->size;
+        for(int i = 0; i < *key_size; i++)
+        {
+            result_key[i] = material->value[i];
+        }
+        *key = result_key;
+        
+        /* Clean up the response message, the encoding buffer, and the KMIP */
+        /* context. */
+        kmip_free_response_message(ctx, &resp_m);
+        kmip_free_buffer(ctx, encoding, buffer_total_size);
+        encoding = NULL;
+        kmip_set_buffer(ctx, NULL, 0);
+        
+        return(result);
+
+    }else{
         kmip_free_response_message(ctx, &resp_m);
         kmip_set_buffer(ctx, NULL, 0);
+        printf("Mahesh  KMIP_OBJTYPE_TYPE MISMATCH ERROR \n");
         return(KMIP_OBJECT_MISMATCH);
     }
     
-    SymmetricKey *symmetric_key = (SymmetricKey *)pld->object;
-    KeyBlock *block = symmetric_key->key_block;
-    if((block->key_format_type != KMIP_KEYFORMAT_RAW) || 
-       (block->key_wrapping_data != NULL))
-    {
-        kmip_free_response_message(ctx, &resp_m);
-        kmip_set_buffer(ctx, NULL, 0);
-        return(KMIP_OBJECT_MISMATCH);
-    }
+    // KeyValue *block_value = block->key_value;
+    // ByteString *material = (ByteString *)block_value->key_material;
     
-    KeyValue *block_value = block->key_value;
-    ByteString *material = (ByteString *)block_value->key_material;
+    // char *result_key = ctx->calloc_func(ctx->state, 1, material->size);
+    // *key_size = material->size;
+    // for(int i = 0; i < *key_size; i++)
+    // {
+    //     result_key[i] = material->value[i];
+    // }
+    // *key = result_key;
     
-    char *result_key = ctx->calloc_func(ctx->state, 1, material->size);
-    *key_size = material->size;
-    for(int i = 0; i < *key_size; i++)
-    {
-        result_key[i] = material->value[i];
-    }
-    *key = result_key;
-    
-    /* Clean up the response message, the encoding buffer, and the KMIP */
-    /* context. */
-    kmip_free_response_message(ctx, &resp_m);
-    kmip_free_buffer(ctx, encoding, buffer_total_size);
-    encoding = NULL;
-    kmip_set_buffer(ctx, NULL, 0);
+    // /* Clean up the response message, the encoding buffer, and the KMIP */
+    // /* context. */
+    // kmip_free_response_message(ctx, &resp_m);
+    // kmip_free_buffer(ctx, encoding, buffer_total_size);
+    // encoding = NULL;
+    // kmip_set_buffer(ctx, NULL, 0);
     
     return(result);
 }
