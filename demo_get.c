@@ -255,9 +255,9 @@ use_mid_level_api(char *server_address,
         
         if(result == KMIP_STATUS_SUCCESS)
         {
-            printf("Symmetric Key ID: %s\n", id);
-            printf("Symmetric Key Size: %d bits\n", key_size * 8);
-            printf("Symmetric Key:");
+            printf("Key ID: %s\n", id);
+            printf("Key Size: %d bits\n", key_size * 8);
+            printf("Key:");
             kmip_print_buffer(stdout, key, key_size);
             printf("\n");
         }
