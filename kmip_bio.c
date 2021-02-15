@@ -1084,10 +1084,13 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     ResponseBatchItem resp_item = resp_m.batch_items[0];
     enum result_status result = resp_item.result_status;
     
+    printf("RESULT REASON -> %d", resp_item.result_reason);
+
     if(result != KMIP_STATUS_SUCCESS)
     {
         kmip_free_response_message(ctx, &resp_m);
         kmip_set_buffer(ctx, NULL, 0);
+        printf("Heyyy");
         return(result);
     }
     

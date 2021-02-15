@@ -227,6 +227,8 @@ use_mid_level_api(char *server_address,
         kmip_destroy(&kmip_context);
         return(result);
     }
+
+    printf("Mahesh GET ID -> %s",id);
     
     result = kmip_bio_get_symmetric_key_with_context(&kmip_context, bio, id, id_size, &key, &key_size);
     

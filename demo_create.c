@@ -332,7 +332,7 @@ use_low_level_api(const char *server_address,
             TextString *uuid = pld->unique_identifier;
             
             if(uuid != NULL)
-                printf("Symmetric Key ID: %.*s\n", (int)uuid->size, uuid->value);
+                printf("Mahesh Symmetric Key ID: %.*s\n", (int)uuid->size, uuid->value);
         }
     }
     
