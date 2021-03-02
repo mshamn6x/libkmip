@@ -432,7 +432,7 @@ int kmip_bio_destroy_symmetric_key(BIO *bio, char *uuid, int uuid_size)
     encoding = NULL;
     kmip_set_buffer(&ctx, NULL, 0);
     kmip_destroy(&ctx);
-    
+
     return(result);
 }
 
@@ -992,10 +992,13 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     }
     
     int sent = BIO_write(bio, ctx->buffer, ctx->index - ctx->buffer);
+    printf("\nGET TEST SENT -> %d",sent);
+    printf("\nGET TEST ctx->index - ctx->buffer -> %d",ctx->index - ctx->buffer);
     if(sent != ctx->index - ctx->buffer)
     {
         kmip_free_buffer(ctx, encoding, buffer_total_size);
         encoding = NULL;
+        printf("GET TEST 1");
         return(KMIP_IO_FAILURE);
     }
     
@@ -1022,7 +1025,7 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
         encoding = NULL;
         return(KMIP_IO_FAILURE);
     }
-    
+
     kmip_set_buffer(ctx, encoding, buffer_total_size);
     ctx->index += 4;
     int length = 0;
@@ -1046,19 +1049,27 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
         encoding = extended;
     }
     ctx->memset_func(encoding + buffer_total_size, 0, length);
-    
+
     buffer_block_size += length;
     buffer_total_size = buffer_blocks * buffer_block_size;
+
+      uint8 *output = ctx->calloc_func(
+        ctx->state,
+        *encoding,
+        buffer_total_size + length);
+    int total_recv = 0;
+    do {
+      if(total_recv != length) {
+      recv = BIO_read(bio, encoding + 8, length);
     
-    recv = BIO_read(bio, encoding + 8, length);
-    if(recv != length)
-    {
-        kmip_free_buffer(ctx, encoding, buffer_total_size);
-        encoding = NULL;
-        return(KMIP_IO_FAILURE);
-    }
-    
-    kmip_set_buffer(ctx, encoding, buffer_block_size);
+      for(int i= 0; i < recv ; i++){
+          output[i + total_recv] = encoding[i];
+       }
+       total_recv = total_recv + recv;
+     }
+    }while(total_recv != length);
+   
+     kmip_set_buffer(ctx, output, buffer_block_size); 
     
     /* Decode the response message and retrieve the operation result status. */
     ResponseMessage resp_m = {0};
@@ -1083,21 +1094,18 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
     
     ResponseBatchItem resp_item = resp_m.batch_items[0];
     enum result_status result = resp_item.result_status;
-    
-    printf("RESULT REASON -> %d", resp_item.result_reason);
 
     if(result != KMIP_STATUS_SUCCESS)
     {
         kmip_free_response_message(ctx, &resp_m);
         kmip_set_buffer(ctx, NULL, 0);
-        printf("Heyyy");
         return(result);
     }
     
     GetResponsePayload *pld = (GetResponsePayload *)resp_item.response_payload;
     
     KeyBlock *block;
-    
+  
     if(pld->object_type == KMIP_OBJTYPE_SYMMETRIC_KEY)
     {
     
@@ -1114,10 +1122,10 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
 
         PublicKey *pubkey = (PublicKey *)pld->object;
         block = pubkey->key_block;
-        
-        if((block->key_format_type != KMIP_KEYFORMAT_PKCS1) || (block->key_wrapping_data != NULL))
+       
+        if((block->key_format_type != KMIP_KEYFORMAT_PKCS8) || (block->key_wrapping_data != NULL))
         {
-            
+
             kmip_free_response_message(ctx, &resp_m);
             kmip_set_buffer(ctx, NULL, 0);
             return(KMIP_OBJECT_MISMATCH);
@@ -1127,10 +1135,10 @@ int kmip_bio_get_symmetric_key_with_context(KMIP *ctx, BIO *bio,
 
         PrivateKey *privatekey = (PrivateKey *)pld->object;
         block = privatekey->key_block;
-        
+
         if((block->key_format_type != KMIP_KEYFORMAT_PKCS8) || (block->key_wrapping_data != NULL))
         {
-            
+
             kmip_free_response_message(ctx, &resp_m);
             kmip_set_buffer(ctx, NULL, 0);
             return(KMIP_OBJECT_MISMATCH);
@@ -1267,6 +1275,7 @@ int kmip_bio_destroy_symmetric_key_with_context(KMIP *ctx, BIO *bio,
         kmip_free_buffer(ctx, encoding, buffer_total_size);
         encoding = NULL;
         kmip_set_buffer(ctx, NULL, 0);
+        printf("GET TEST 4");
         return(KMIP_IO_FAILURE);
     }
     
